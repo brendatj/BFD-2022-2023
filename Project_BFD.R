@@ -244,7 +244,7 @@ x <- year
 y <- GSPC
 data_graph1 <- data.frame(x, y)
 
-fig <- plot_ly(data_graph1, x = ~x, y = ~y, type = 'scatter', mode = 'lines')
+fig <- plot_ly(data_graph1, x = x, y = y, type = 'scatter', mode = 'lines')
 
 fig
 ```
@@ -254,7 +254,7 @@ x <- year
 y <- `GSPC returns`
 data_graph1 <- data.frame(x, y)
 
-fig <- plot_ly(data_graph1, x = ~x, y = ~y, type = 'scatter', mode = 'lines')
+fig <- plot_ly(data_graph1, x = x, y = y, type = 'scatter', mode = 'lines')
 
 fig
 ```
