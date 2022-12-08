@@ -2,7 +2,7 @@
 Business and financial Data Guidolin
 ---
 title: "Business Economic and Financial Data Project"
-author: "Brenda Eloísa Téllez Juárez"
+author: "Brenda Eloísa Téllez Juárez, Angelica Giangiacomi, Pietro Sanguin"
 date: "2022-11-27"
 output:
   powerpoint_presentation: default
@@ -13,9 +13,9 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 ##Setting the working directory
-```{r}
-bren<-setwd("~/UNIPD/Business, economics and financial data")
-```
+#```{r}
+#bren<-setwd("~/UNIPD/Business, economics and financial data")
+#```
 
 ## Packages
 ```{r}
@@ -447,10 +447,91 @@ ts.plot(cbind(ts1_GSPC, ts2_VIX))
 #Log returns for both indexes
 plot(cbind(ts1_GSPC_returns, ts2_VIX_returns))
 ```
-
+## Now we can take a look at the correlations between the predictors
 ```{r}
+library(ellipse)
+# plot correlation ellipses
+plotcorr(cor(data))
 
 ```
+# we can see that there are are some features that are correlated,
+# most of them are expected, like GDP with GDP per capita and VIX with VIX returns 
+# and other (maybe) less intuitive, like population with GDP
+# thus we select only one of them (because if they are correlated, than using both of them is redundant)
+
+
+
+
+## Now we check for multicollinearity
+
+```{r}
+# compute VIFs
+library(car)
+
+model <- lm(GSPC~VIX+GNI+population+inflation+interest_rate+GDP) 
+GSPC_vs_all <- VIF(model)
+cat('GSPC:',GSPC_vs_all,'   ')
+
+
+model <- lm(VIX~GSPC+GNI+population+inflation+interest_rate+GDP)
+VIX_vs_all <- VIF(model)
+cat('VIX:', VIX_vs_all,'   ')
+
+
+model <- lm(GNI~GSPC+VIX+population+inflation+interest_rate+GDP)
+GNI_vs_all <- VIF(model)
+cat('GNI:', GNI_vs_all,'   ')
+
+
+model <- lm(population~GSPC+VIX+GNI+inflation+interest_rate+GDP)
+population_vs_all <- VIF(model)
+cat('population:', population_vs_all,'   ')
+
+
+model <- lm(inflation~GSPC+VIX+GNI+population+interest_rate+GDP)
+inflation_vs_all <- VIF(model)
+cat('inflation:', inflation_vs_all,'   ')
+
+
+model <- lm(interest_rate~GSPC+VIX+GNI+population+inflation+GDP)
+interest_rate_vs_all <- VIF(model)
+cat('interest_rate:', interest_rate_vs_all,'   ')
+
+
+model <- lm(GDP~GSPC+VIX+GNI+population+inflation+interest_rate)
+GPD_vs_all <- VIF(model)
+cat('GDP:', GPD_vs_all)
+```
+# From the results above we can notice we have a strong situation of multicollinearity.
+# We have that the highest values are the VIF values computed for GNI, population and GDP
+
+
+# Now we compute the VIFs without considering GNI, population and GDP predictors (i.e. those ones having the highest VIF values)
+
+```{r}
+model <- lm(GSPC~VIX+inflation+interest_rate) 
+GSPC_vs_all <- VIF(model)
+cat('GSPC:',GSPC_vs_all,'   ')
+
+
+model <- lm(VIX~GSPC+inflation+interest_rate)
+VIX_vs_all <- VIF(model)
+cat('VIX:', VIX_vs_all,'   ')
+
+
+model <- lm(inflation~GSPC+VIX+interest_rate)
+inflation_vs_all <- VIF(model)
+cat('inflation:', inflation_vs_all,'   ')
+
+
+model <- lm(interest_rate~GSPC+VIX+inflation)
+interest_rate_vs_all <- VIF(model)
+cat('interest_rate:', interest_rate_vs_all,'   ')
+```
+# in the cell above we obtain great results from VIFs
+# thus we are going to use only the following four predictors: GSPC, VIX, inflation, interest_rate
+# because all the others are redundant, due to strong correlation or very high VIF values
+# (btw, I know this is a repetition, but it is just to clarify)
 
 
 
