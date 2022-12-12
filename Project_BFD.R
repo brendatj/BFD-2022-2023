@@ -533,6 +533,223 @@ cat('interest_rate:', interest_rate_vs_all,'   ')
 # because all the others are redundant, due to strong correlation or very high VIF values
 # (btw, I know this is a repetition, but it is just to clarify)
 
+#Autoregressive model AR Inflation
+```{r}
+ts.plot(data$Inflation)
+AR_inflation <- arima(data$Inflation, order = c(1,0,0))
+AR_inflation_fitted<- data$Inflation - residuals(AR_inflation)
+points(AR_inflation_fitted, type='l', col="red", lty=2)
+```
+Forecasting
+```{r}
+predict(AR_inflation, n.ahead=6)$pred
+```
+
+```{r}
+predict(AR_inflation, n.ahead=6)$se
+```
+#Moving average process MA inflation
+
+```{r}
+ts.plot(data$Inflation)
+MA_inflation <- arima(data$Inflation, order = c(0,0,1))
+MA_inflation_fitted<- data$Inflation - residuals(MA_inflation)
+points(MA_inflation_fitted, type='l', col="red", lty=2)
+```
+#Forecast
+
+```{r}
+predict(MA_inflation, n.ahead=6)$pred
+```
+```{r}
+predict(MA_inflation, n.ahead=6)$se
+```
+#Correlation between AR and MA
+```{r}
+cor(AR_inflation_fitted, MA_inflation_fitted)
+```
+#AIC & BIC of AR Inflation
+```{r}
+AIC(AR_inflation)
+BIC(AR_inflation)
+```
+#AIC & BIC of MA Inflation
+```{r}
+AIC(MA_inflation)
+BIC(MA_inflation)
+```
+```{r}
+arima11<- Arima(GSPC, order=c(1,0,1))
+fitted(arima11)
+
+resid1<- residuals(arima11)
+tsdisplay(resid1)
+
+plot(GSPC, type='l')
+lines(fitted(arima11), col=2)
+
+for1<- forecast(arima11)
+plot(for1)
+```
+```{r}
+plot(GSPC, ylab="GSPC index",xlab="year")
+tsdisplay(GSPC)
+diff1<- diff(GSPC)
+tsdisplay(diff1)
+
+####we fit the first Arima model 
+a1<- Arima(GSPC, order=c(1,0,1), seasonal=c(0,0,1))
+fit1<- fitted(a1)
+
+plot(GSPC, type = 'l')
+lines(fit1, col=2)
+
+f1<- forecast(a1)
+plot(f1)
+
+r1<- residuals(a1)
+tsdisplay(r1) 
+```
+
+```{r}
+auto.a<- auto.arima(GSPC)
+auto.a
+
+plot(forecast(auto.a))
+```
+
+```{r}
+autoplot(ts(data))
+```
+
+
+
+```{r}
+tsdisplay(GSPC)
+```
+
+```{r}
+par(mfrow=c(1,1))
+armax1<- Arima(GSPC, xreg=VIX, order=c(1,1,2))
+res1<- residuals(armax1)
+Acf(res1)
+fitted(armax1)
+plot(GSPC, type='l')
+lines(fitted(armax1), col=2)
+```
+```{r}
+armax2<- Arima(GSPC, xreg=VIX, order=c(1,1,1))
+res2<- residuals(armax2)
+Acf(res2)
+
+fitted(armax2)
+plot(GSPC, type='l')
+lines(fitted(armax2), col=2)
+AIC(armax2)
+AIC(arima1)
+```
+```{r}
+armax3<- auto.arima(GSPC, xreg=VIX)
+res3<- residuals(armax3)
+Acf(res3)
+
+fitted(armax3)
+plot(GSPC, type='l')
+lines(fitted(armax3), col=2)
+```
+```{r}
+AIC(armax3)
+AIC(armax2)
+AIC(arima1)
+```
+#doesnt work the tslm
+
+#Dividing the dataset in training and testing
+
+```{r}
+set.seed(123)
+split = sample.split(GSPC, SplitRatio = 2/3)
+training_set = subset(data, split == TRUE)
+test_set = subset(data, split == FALSE)
+```
+
+#Linear model
+```{r}
+m1 <- lm(GSPC~., data=training_set)
+summary(m1)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m1)
+par(mfrow=c(1,1))
+```
+```{r}
+
+m1.graph<-ggplot(data, aes(x=data$GSPC, y=data$Population))+
+                     geom_point() + geom_smooth(method="lm", col="pink") +
+  labs(title = "GSPC as a function of Population",
+      x = "GSPC",
+      y = "Population")
+
+m1.graph
+```
+
+
+
+```{r}
+m2 <- lm(data$GSPC~ data$Population +data$GNI, data=training_set)
+summary(m2)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m2)
+par(mfrow=c(1,1))
+```
+
+
+```{r}
+m3 <- lm(data$GSPC~data$Population, data=training_set)
+summary(m3)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m3)
+par(mfrow=c(1,1))
+```
+
+```{r}
+m4 <- step(m1, direction="both")
+summary(m4)
+```
+```{r}
+m5 <- lm(data$GSPC~data$Population +data$Year+ data$VIX+ data$GNI+ data$`GSPC returns`, data=training_set)
+summary(m5)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m5)
+par(mfrow=c(1,1))
+```
+
+
+#Prediction
+```{r}
+p.lm <- predict(m5, newdata=test_set)
+dev.lm <- sum((p.lm-test_set$GSPC)^2)
+dev.lm
+
+AIC(m5)
+```
+#Stepwise GAM
+
+```{r}
+g1 <- gam(GSPC~., data=training_set)
+```
+
+```{r}
+par(mfrow=c(3,5))
+plot(g1, se=T, col='pink') 
+```
 
 
 
