@@ -21,6 +21,11 @@ knitr::opts_chunk$set(echo = FALSE)
 ```{r}
 #Dataset
 library(readxl)
+
+## Packages
+```{r}
+#Dataset
+library(readxl)
 #Create the pdf
 library(knitr)
 library(markdown)
@@ -31,20 +36,24 @@ library(naniar)
 library(ggplot2)
 library(tidyverse)
 library(plotly)
+#Correlation and multicollinearity
+library(ellipse)
+library(car)
 #Inspecting the dataframe
 library(inspectdf)
 #Time series
 library(fpp2)
 library(forecast)
 library(lmtest)
+library(gam)
+library(gbm)
 #Mine
 library(ts.extend)
 library(tseries)
+library(caTools)
 
 set.seed(50)
 ```
-
-
 
 #Dataset
 ```{r}
