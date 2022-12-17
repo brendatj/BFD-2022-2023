@@ -21,11 +21,6 @@ knitr::opts_chunk$set(echo = FALSE)
 ```{r}
 #Dataset
 library(readxl)
-
-## Packages
-```{r}
-#Dataset
-library(readxl)
 #Create the pdf
 library(knitr)
 library(markdown)
@@ -36,6 +31,7 @@ library(naniar)
 library(ggplot2)
 library(tidyverse)
 library(plotly)
+library(DiagrammeR)
 #Correlation and multicollinearity
 library(ellipse)
 library(car)
@@ -46,7 +42,10 @@ library(fpp2)
 library(forecast)
 library(lmtest)
 library(gam)
+#Gradient Boosting Model
 library(gbm)
+library(xgboost)
+library(caret)
 #Mine
 library(ts.extend)
 library(tseries)
@@ -760,5 +759,107 @@ par(mfrow=c(3,5))
 plot(g1, se=T, col='pink') 
 ```
 
+#GBM
+```{r}
+library(caret)
+# Partition into training and test data
+set.seed(42)
+index <- createDataPartition(data$GSPC, p = 0.7, list = FALSE)
+train_data <- data[index, ]
+test_data  <- data[-index, ]
+```
 
+```{r}
+head(test_data)
+```
+
+```{r}
+# Train model with preprocessing & repeated cv
+library(xgboost)
+
+xgboost_model <- xgboost(data = as.matrix(train_data[, -1]), 
+                         label = as.numeric(train_data$GSPC)-1,
+                         max_depth = 3, 
+                         objective = 'reg:squarederror', 
+                         nrounds = 10, 
+                         verbose = FALSE,
+                         prediction = TRUE)
+xgboost_model
+```
+```{r}
+yhat.boost<-predict(xgboost_model, 
+        as.matrix(test_data[, -1])) %>%
+  as.tibble() %>%
+  mutate(prediction = round(value),
+         label = as.numeric(test_data$GSPC)-1) %>%
+  count(prediction, label)
+yhat.boost
+```
+```{r}
+summary(xgboost_model)
+```
+```{r}
+# Plot with all the trees
+library(DiagrammeR)
+xgb.plot.tree(model = xgboost_model)
+```
+```{r}
+#The below code is to plot first tree and show its node ID
+xgb.plot.tree(model = xgboost_model, trees = 0, show_node_id = TRUE)
+```
+```{r}
+#With advance settings
+dtrain <- xgb.DMatrix(as.matrix(train_data[, -1]), 
+                      label = as.numeric(train_data$GSPC)-1)
+dtest <- xgb.DMatrix(as.matrix(test_data[, -1]), 
+                      label = as.numeric(test_data$GSPC)-1)
+
+params <- list(max_depth = 3, 
+               objective = 'reg:squarederror',
+               silent = 0)
+
+watchlist <- list(train = dtrain, eval = dtest)
+
+bst_model <- xgb.train(params = params, 
+                       data = dtrain, 
+                       nrounds = 10, 
+                       watchlist = watchlist,
+                       verbose = FALSE,
+                       prediction = TRUE)
+bst_model
+```
+```{r}
+predict(bst_model, 
+        as.matrix(test_data[, -1])) %>%
+  as.tibble() %>%
+  mutate(prediction = round(value),
+         label = as.numeric(test_data$GSPC)-1) %>%
+  count(prediction, label)
+```
+```{r}
+# Plot with all the trees
+library(DiagrammeR)
+xgb.plot.tree(model = bst_model)
+```
+```{r}
+#The below code is to plot first tree and show its node ID
+xgb.plot.tree(model = bst_model, trees = 0, show_node_id = TRUE)
+```
+```{r}
+#Cross validation
+cv_model <- xgb.cv(params = params,
+                   data = dtrain, 
+                   nrounds = 100, 
+                   watchlist = watchlist,
+                   nfold = 5,
+                   verbose = FALSE,
+                   prediction = TRUE) # prediction of cv folds
+cv_model
+```
+```{r}
+#we can see after how many rounds, we achieved the smallest test error
+cv_model$evaluation_log %>%
+  filter(test_rmse_mean == min(test_rmse_mean))
+```
+#The graph between predicted values is missing
 
