@@ -1,0 +1,875 @@
+
+---
+#title: "Business Economic and Financial Data Project"
+#author: "Brenda Eloísa Téllez Juárez, Angelica Giangiacomi, Pietro Sanguin"
+#date: "2022-11-27"
+#output:
+#powerpoint_presentation: default
+#slidy_presentation: default
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+##Setting the working directory
+#```{r}
+#bren<-setwd("~/UNIPD/Business, economics and financial data")
+#```
+
+install.packages("caTools")
+## Packages
+```{r}
+#Dataset
+library(car)
+library(readxl)
+#Create the pdf
+library(knitr)
+library(markdown)
+library(commonmark)
+#missing values
+library(naniar)
+#Visualizations
+library(ggplot2)
+library(tidyverse)
+
+```
+```{r}
+library(plotly)
+library(DiagrammeR)
+#Correlation and multicollinearity
+library(ellipse)
+library(car)
+#Inspecting the dataframe
+library(inspectdf)
+#Time series
+library(fpp2)
+library(forecast)
+library(lmtest)
+library(gam)
+#Gradient Boosting Model
+library(gbm)
+library(xgboost)
+library(caret)
+#Mine
+library(ts.extend)
+library(tseries)
+library(caTools)
+
+set.seed(50)
+```
+
+
+#Dataset
+```{r}
+database1 <- read_excel("df.xlsx")
+database1 <- subset(database1, select =-c(...1))
+colnames(database1)[c(1)] <- c("GSPC")
+colnames(database1)[c(5)] <- c("Inflation")
+colnames(database1)[c(7)] <- c("Real interest rate")
+data<-database1
+attach(data)
+```
+#Dataset
+```{r}
+head(data, n=5)
+tail(data, n=5)
+```
+
+
+#Understanding the data
+```{r}
+summary(data)
+str(data)
+sapply(data, class)
+```
+```{r}
+print(start(GSPC))
+print(end(GSPC))
+print(frequency(GSPC))
+print(deltat(GSPC))
+print(cycle(GSPC))
+```
+
+#Data engineering
+
+##Searching for null values
+```{r}
+sapply(data, function(x) round((sum(is.na(x))/length(x))*100,2))
+#Visualizing them
+gg_miss_var(data)
+```
+
+#Data transformations
+
+##Renaming columns
+#We have to remember that Inflation corresponds to MCPI, and Real interest rate are the FED interest rate 
+```{r}
+#colnames(data) <- c('Year', "VIX",'VIX returns',  "Inflation",'Population', "Real interest #rate", "GDP", "GDP per capita", "GNI",'GSPC returns', "GSPC")
+#columns <- colnames(data)
+
+```
+
+##Copy of the original dataframe
+```{r}
+data2 <- data.frame(data)
+```
+
+#Data engineering
+
+##Null values
+```{r}
+data <-replace(data, is.na(data), 0)
+```
+
+##Checking null values
+```{r}
+sapply(data, function(x) round((sum(is.na(x))/length(x))*100,2))
+```
+##Visualizing them
+```{r}
+gg_miss_var(data)
+```
+#Exploratory Data Analysis
+
+##Dimension of the dataset
+```{r}
+dim(data)
+```
+##Exploring the dataset
+```{r}
+head(data)
+tail(data)
+```
+#Univariate Analysis
+
+##Visualizing distributions
+```{r}
+dens_vix <- density(log(data$VIX))
+
+plot_ly(
+  data = data,
+  x = ~log(VIX),
+  type = "histogram",
+  name = "Histogram") %>% 
+  add_lines(x = dens_vix$x, y = dens_vix$y, yaxis = "y2", name = "Density") %>% 
+  layout(yaxis2 = list(overlaying = "y", #Adds the dual y-axis
+                       side = "right", #Adds the density axis on the right side
+                       rangemode = "tozero")) #Forces both y-axes to start at 0
+
+```
+```{r}
+dens_gspc <- density(log(data$GSPC))
+
+plot_ly(
+  data = data,
+  x = ~log(GSPC),
+  type = "histogram",
+  name = "Histogram") %>% 
+  add_lines(x = dens_gspc$x, y = dens_gspc$y, yaxis = "y2", name = "Density") %>% 
+  layout(yaxis2 = list(overlaying = "y", #Adds the dual y-axis
+                       side = "right", #Adds the density axis on the right side
+                       rangemode = "tozero")) #Forces both y-axes to start at 0
+```
+```{r}
+dens_gdp <- density(log(data$GDP))
+
+plot_ly(
+  data = data,
+  x = ~log(GDP),
+  type = "histogram",
+  name = "Histogram") %>% 
+  add_lines(x = dens_gdp$x, y = dens_gdp$y, yaxis = "y2", name = "Density") %>% 
+  layout(yaxis2 = list(overlaying = "y", #Adds the dual y-axis
+                       side = "right", #Adds the density axis on the right side
+                       rangemode = "tozero")) #Forces both y-axes to start at 0
+```
+
+#Bivariate Analysis
+
+##Analizing the relationship between VIX and GSPC
+```{r}
+data %>% 
+  ggplot() + 
+  aes(x = VIX, y = GSPC) + 
+  geom_point(color= "steelblue") +
+  geom_smooth(method = 'lm', color = 'purple') 
+```
+```{r}
+ggplot(data, 
+       aes(x = VIX, 
+           y = GSPC)) +
+  geom_point(color= "steelblue") +
+  geom_smooth(method = "lm", 
+              formula = y ~ poly(x, 2), 
+              color = "purple")
+```
+
+
+##Analizing the relationship between GDP and GSPC
+```{r}
+data %>% 
+  ggplot() + 
+  aes(x = GDP, y = GSPC) + 
+  geom_point(color= "steelblue") +
+  geom_smooth(method = 'lm', color = 'purple') 
+```
+
+```{r}
+data %>% 
+  ggplot() + 
+  aes(x = Date, y = GSPC) + 
+  geom_point(color= "steelblue") +
+  scale_x_date(breaks = years, labels = format(years, "%Y"))
+```
+
+## Analyis of the GSPC and GDP taking into account the year 
+```{r}
+data$Date <- as.Date(data$Date, format = "X%Y.%m.%d")
+years <- seq(from = min(data$Date), to = max(data$Date), by = "year")
+
+
+data %>% 
+  ggplot() + 
+  aes(x = Date, y = GDP, color = GSPC.Close) +
+  geom_point()+
+  geom_smooth(method = 'lm', color = 'purple')
+
+
+```
+
+
+
+##Analizing the relationship between VIX and GDP
+```{r}
+data %>% 
+  ggplot() + 
+  aes(x = VIX, y = GDP) + 
+  geom_point(color= "steelblue") +
+  geom_smooth(method = 'lm', color = 'purple') 
+```
+
+```{r}
+data %>% 
+  ggplot() + 
+  aes(x = VIX, y = GDP) + 
+  geom_point(color= "steelblue") +
+  geom_smooth(method = 'lm', color = 'purple', formula=y ~ poly(x, 2)) 
+```
+
+
+#Time series analysis: Linear regression and Arima models.
+
+##Plot GSPC
+```{r}
+x <- Date
+y <- GSPC
+data_graph1 <- data.frame(x, y)
+
+fig <- plot_ly(data_graph1, x = x, y = y, type = 'scatter', mode = 'lines')
+
+fig
+```
+
+#AFC GSPC
+```{r}
+Acf_GSPC<-ggAcf(GSPC, col='blue')
+Acf_GSPC+ ggtitle("Autocorrelation Function ACF") + xlab("Lag") + ylab("ACF")
+```
+#PACF GSPC
+```{r}
+Pacf_GSPC<-ggAcf(GSPC, col='blue')
+Pacf_GSPC+ ggtitle("Partial Autocorrelation Function PACF GSPC") + xlab("Lag") + ylab("PACF")
+```
+##Plot VIX
+```{r}
+x <- Date
+y <- VIX
+data_graph2 <- data.frame(x, y)
+
+fig <- plot_ly(data_graph2, x = ~x, y = ~y, type = 'scatter', mode = 'lines')
+fig
+```
+
+##AFC VIX
+```{r}
+Acf_GSPC<-ggAcf(VIX, col='blue')
+Acf_GSPC+ ggtitle("Autocorrelation Function VIX") + xlab("Lag") + ylab("ACF")
+```
+##PACF VIX
+```{r}
+Pacf_GSPC<-ggAcf(VIX, col='blue')
+Pacf_GSPC+ ggtitle("Partial Autocorrelation Function PACF VIX") + xlab("Lag") + ylab("PACF")
+```
+##Plot GDP
+```{r}
+x <- Date
+y <- GDP
+data_graph3 <- data.frame(x, y)
+
+fig <- plot_ly(data_graph3, x = ~x, y = ~y, type = 'scatter', mode = 'lines')
+
+fig
+```
+
+##AFC GDP
+```{r}
+Acf_GSPC<-ggAcf(GDP, col='blue')
+Acf_GSPC+ ggtitle("Autocorrelation Function GDP") + xlab("Lag") + ylab("ACF")
+```
+
+##PACF GDP
+
+```{r}
+Pacf_GSPC<-ggAcf(GDP, col='blue')
+Pacf_GSPC+ ggtitle("Partial Autocorrelation Function PACF GDP") + xlab("Lag") + ylab("PACF")
+```
+
+#Time Series
+
+```{r}
+#Creating the time series (for yearly data)
+ts1_GSPC<-ts(GSPC, start = 1990, end=2021, frequency = 1)
+ts2_VIX<-ts(VIX, start = 1990, end=2021, frequency = 1)
+ts3_GDP<-ts(GDP, start = 1990, end=2021, frequency = 1)
+is.ts(ts1_GSPC)
+```
+
+```{r}
+#Creating the time series (for montly data)
+ts1_GSPC<-ts(GSPC, start = 1990, end=2021, frequency = 12)
+ts2_VIX<-ts(VIX, start = 1990, end=2021, frequency = 12)
+ts3_GDP<-ts(GDP, start = 1990, end=2021, frequency = 12)
+is.ts(ts1_GSPC)
+```
+
+```{r}
+#Returns
+#ts1_GSPC_returns<-ts(`GSPC returns`, start = 1990, end=2021, frequency = 1)
+#ts2_VIX_returns<-ts(`VIX returns`, start = 1990, end=2021, frequency = 1)
+```
+
+#Transforming the time series with log and differenciating them
+##Aplying the log transformation
+
+```{r}
+#Applying log transformations to try to stabilize the variance
+ts1_GSPC_log<-log(ts1_GSPC)
+par(mfrow=c(1,2))
+ts.plot(ts1_GSPC_log)
+ts.plot(ts1_GSPC)
+```
+
+```{r}
+#Applying log transformations
+ts2_VIX_log<-log(ts2_VIX)
+par(mfrow=c(1,2))
+ts.plot(ts2_VIX_log)
+ts.plot(ts2_VIX)
+```
+##Aplying the diff transformation
+
+```{r}
+#Applying diff transformations to eliminate the linear trend
+ts1_GSPC_diff<-diff(ts1_GSPC)
+par(mfrow=c(1,2))
+ts.plot(ts1_GSPC_diff)
+ts.plot(ts1_GSPC)
+```
+
+```{r}
+#Applying diff transformations
+ts2_VIX_diff<-diff(ts2_VIX)
+par(mfrow=c(1,2))
+ts.plot(ts2_VIX_diff)
+ts.plot(ts2_VIX)
+```
+
+
+##Aplying the diff seasonal transformation
+
+```{r}
+#Applying diff transformations to eliminate the linear trend and seasonality
+ts1_GSPC_diff_s<-diff(ts1_GSPC, s=2)
+par(mfrow=c(1,2))
+ts.plot(ts1_GSPC_diff_s)
+ts.plot(ts1_GSPC_diff)
+ts.plot(ts1_GSPC)
+```
+```{r}
+#Applying diff seasonality transformations
+ts2_VIX_diff_s<-diff(ts2_VIX, lag=12)
+par(mfrow=c(1,2))
+ts.plot(ts2_VIX_diff_s)
+ts.plot(ts2_VIX_diff)
+ts.plot(ts2_VIX)
+```
+
+```{r}
+#Exploring the length
+length(ts1_GSPC)
+length(ts1_GSPC_diff)
+length(ts2_VIX)
+length(ts2_VIX_diff)
+```
+
+#Estimating the white noise
+
+
+```{r}
+#Estimating white noise for GSPC
+arima(ts1_GSPC, order=c(0,0,0))
+```
+```{r}
+#Estimating white noise for VIX
+arima(ts2_VIX, order=c(0,0,0))
+```
+
+
+```{r}
+#Applying differentiated model GSPC
+model_wn_gspc<-arima(ts1_GSPC_diff, order=c(0,0,0))
+int_wn_gspc <- model_wn_gspc$coef
+```
+
+```{r}
+ts.plot(ts1_GSPC)
+abline(0,int_wn_gspc)
+```
+
+```{r}
+#Applying differentiated model VIX
+model_wn_vix<-arima(ts2_VIX_diff, order=c(0,0,0))
+int_wn_vix<- model_wn_vix$coef
+```
+
+```{r}
+ts.plot(ts2_VIX)
+abline(0,int_wn_vix)
+```
+
+##Plotting the two indexes together
+
+```{r}
+ts.plot(cbind(ts1_GSPC, ts2_VIX))
+```
+
+```{r}
+#Log returns for both indexes
+#plot(cbind(ts1_GSPC_returns, ts2_VIX_returns))
+```
+## Now we can take a look at the correlations between the predictors
+```{r}
+library(ellipse)
+# plot correlation ellipses
+df_numeric <- select(data, -Date)
+plotcorr(cor(df_numeric))
+
+```
+# we can see that there are are some features that are correlated,
+# most of them are expected, like GDP with GDP per capita and VIX with VIX returns 
+# and other (maybe) less intuitive, like population with GDP
+# thus we select only one of them (because if they are correlated, than using both of them is redundant)
+
+
+
+
+## Now we check for multicollinearity
+
+```{r}
+# compute VIFs
+
+
+#I rename the column of Real interest rate
+colnames(data)[colnames(data) == "Real interest rate"] <- "Real_interest_rate"
+
+model <- lm(GSPC~VIX+GNI+Population+Inflation+Real_interest_rate+GDP, data = data) 
+GSPC_vs_all <- vif(model)
+cat('GSPC:',GSPC_vs_all,'   ')
+
+
+model <- lm(VIX~GSPC+GNI+Population+Inflation+Real_interest_rate+GDP, data=data)
+VIX_vs_all <- vif(model)
+cat('VIX:', VIX_vs_all,'   ')
+
+
+model <- lm(GNI~GSPC+VIX+Population+Inflation+Real_interest_rate+GDP, data = data)
+GNI_vs_all <- vif(model)
+cat('GNI:', GNI_vs_all,'   ')
+
+
+model <- lm(Population~GSPC+VIX+GNI+Inflation+Real_interest_rate+GDP, data = data)
+population_vs_all <- vif(model)
+cat('population:', population_vs_all,'   ')
+
+
+model <- lm(Inflation~GSPC+VIX+GNI+Population+Real_interest_rate+GDP, data = data)
+inflation_vs_all <- vif(model)
+cat('inflation:', inflation_vs_all,'   ')
+
+
+model <- lm(Real_interest_rate~GSPC+VIX+GNI+Population+Inflation+GDP, data = data)
+interest_rate_vs_all <- vif(model)
+cat('interest_rate:', interest_rate_vs_all,'   ')
+
+
+model <- lm(GDP~GSPC+VIX+GNI+Population+Inflation+Real_interest_rate, data = data)
+GPD_vs_all <- vif(model)
+cat('GDP:', GPD_vs_all)
+```
+# From the results above we can notice we have a strong situation of multicollinearity.
+# We have that the highest values are the VIF values computed for GNI, population and GDP
+
+
+# Now we compute the VIFs without considering GNI, population and GDP predictors (i.e. those ones having the highest VIF values)
+
+```{r}
+model <- lm(GSPC~VIX+Inflation+Real_interest_rate, data = data) 
+GSPC_vs_all <- vif(model)
+cat('GSPC:',GSPC_vs_all,'   ')
+
+
+model <- lm(VIX~GSPC+Inflation+Real_interest_rate, data = data)
+VIX_vs_all <- vif(model)
+cat('VIX:', VIX_vs_all,'   ')
+
+
+model <- lm(Inflation~GSPC+VIX+Real_interest_rate, data = data)
+inflation_vs_all <- vif(model)
+cat('inflation:', inflation_vs_all,'   ')
+
+
+model <- lm(Real_interest_rate~GSPC+VIX+Inflation, data = data)
+interest_rate_vs_all <- vif(model)
+cat('interest_rate:', interest_rate_vs_all,'   ')
+```
+# in the cell above we obtain great results from VIFs
+# thus we are going to use only the following four predictors: GSPC, VIX, inflation, interest_rate
+# because all the others are redundant, due to strong correlation or very high VIF values
+# (btw, I know this is a repetition, but it is just to clarify)
+
+#Autoregressive model AR Inflation
+```{r}
+ts.plot(data$Inflation)
+AR_inflation <- arima(data$Inflation, order = c(1,0,0))
+AR_inflation_fitted<- data$Inflation - residuals(AR_inflation)
+points(AR_inflation_fitted, type='l', col="red", lty=2)
+```
+Forecasting
+```{r}
+predict(AR_inflation, n.ahead=6)$pred
+```
+
+```{r}
+predict(AR_inflation, n.ahead=6)$se
+```
+#Moving average process MA inflation
+
+```{r}
+ts.plot(data$Inflation)
+MA_inflation <- arima(data$Inflation, order = c(0,0,1))
+MA_inflation_fitted<- data$Inflation - residuals(MA_inflation)
+points(MA_inflation_fitted, type='l', col="red", lty=2)
+```
+#Forecast
+
+```{r}
+predict(MA_inflation, n.ahead=6)$pred
+```
+```{r}
+predict(MA_inflation, n.ahead=6)$se
+```
+#Correlation between AR and MA
+```{r}
+cor(AR_inflation_fitted, MA_inflation_fitted)
+```
+#AIC & BIC of AR Inflation
+```{r}
+AIC(AR_inflation)
+BIC(AR_inflation)
+```
+#AIC & BIC of MA Inflation
+```{r}
+AIC(MA_inflation)
+BIC(MA_inflation)
+```
+```{r}
+arima11<- Arima(GSPC, order=c(1,1,1))
+fitted(arima11)
+
+resid1<- residuals(arima11)
+tsdisplay(resid1)
+
+plot(GSPC, type='l')
+lines(fitted(arima11), col=2)
+
+for1<- forecast(arima11)
+plot(for1)
+```
+```{r}
+plot(GSPC, ylab="GSPC index",xlab="year")
+tsdisplay(GSPC)
+diff1<- diff(GSPC)
+tsdisplay(diff1)
+
+####we fit the first Arima model 
+a1<- Arima(GSPC, order=c(1,1,1), seasonal=c(0,0,1))
+fit1<- fitted(a1)
+
+plot(GSPC, type = 'l')
+lines(fit1, col=2)
+
+f1<- forecast(a1)
+plot(f1)
+
+r1<- residuals(a1)
+tsdisplay(r1) 
+```
+
+```{r}
+auto.a<- auto.arima(GSPC)
+auto.a
+
+```
+```{r}
+plot(forecast(auto.a, h=400))
+```
+```{r}
+plot(forecast(auto.a, h=400), xlim = (c(8000, 9000)))
+```
+## They are all different measures (different scales) so are difficult to represent in the same plot
+```{r}
+df_autoplot <- select(data, -GSPC.Volume)
+autoplot(ts(df_autoplot))
+```
+
+
+
+```{r}
+tsdisplay(GSPC)
+```
+
+```{r}
+par(mfrow=c(1,1))
+armax1<- Arima(GSPC, xreg=VIX, order=c(1,1,2))
+res1<- residuals(armax1)
+Acf(res1)
+fitted(armax1)
+plot(GSPC, type='l')
+lines(fitted(armax1), col=2)
+```
+```{r}
+armax2<- Arima(GSPC, xreg=VIX, order=c(1,1,1))
+res2<- residuals(armax2)
+Acf(res2)
+
+fitted(armax2)
+plot(GSPC, type='l')
+lines(fitted(armax2), col=2)
+AIC(armax2)
+AIC(arima1)
+```
+```{r}
+armax3<- auto.arima(GSPC, xreg=VIX)
+res3<- residuals(armax3)
+Acf(res3)
+
+fitted(armax3)
+plot(GSPC, type='l')
+lines(fitted(armax3), col=2)
+```
+```{r}
+AIC(armax3)
+AIC(armax2)
+AIC(arima1)
+```
+#doesnt work the tslm
+
+#Dividing the dataset in training and testing
+
+```{r}
+set.seed(123)
+split = sample.split(GSPC, SplitRatio = 2/3)
+training_set = subset(data, split == TRUE)
+test_set = subset(data, split == FALSE)
+```
+
+#Linear model
+```{r}
+m1 <- lm(GSPC~., data=training_set)
+summary(m1)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m1)
+par(mfrow=c(1,1))
+```
+```{r}
+
+m1.graph<-ggplot(data, aes(x=data$GSPC, y=data$Population))+
+  geom_point() + geom_smooth(method="lm", col="pink") +
+  labs(title = "GSPC as a function of Population",
+       x = "GSPC",
+       y = "Population")
+
+m1.graph
+```
+
+
+
+```{r}
+m2 <- lm(data$GSPC~ data$Population +data$GNI, data=training_set)
+summary(m2)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m2)
+par(mfrow=c(1,1))
+```
+
+
+```{r}
+m3 <- lm(data$GSPC~data$Population, data=training_set)
+summary(m3)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m3)
+par(mfrow=c(1,1))
+```
+
+```{r}
+m4 <- step(m1, direction="both")
+summary(m4)
+```
+```{r}
+m5 <- lm(data$GSPC~data$Population +data$Date+ data$VIX+ data$GNI, data=training_set)
+summary(m5)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(m5)
+par(mfrow=c(1,1))
+```
+
+
+#Prediction
+```{r}
+p.lm <- predict(m5, newdata=test_set)
+dev.lm <- sum((p.lm-test_set$GSPC)^2)
+dev.lm
+
+AIC(m5)
+```
+#Stepwise GAM
+
+```{r}
+g1 <- gam(GSPC~., data=training_set)
+```
+
+```{r}
+par(mfrow=c(3,5))
+plot(g1, se=T, col='pink') 
+```
+
+#GBM
+```{r}
+library(caret)
+# Partition into training and test data
+set.seed(42)
+index <- createDataPartition(data$GSPC, p = 0.7, list = FALSE)
+train_data <- data[index, ]
+test_data  <- data[-index, ]
+```
+
+```{r}
+head(test_data)
+```
+
+```{r}
+# Train model with preprocessing & repeated cv
+library(xgboost)
+
+xgboost_model <- xgboost(data = as.matrix(train_data[, -1]), 
+                         label = as.numeric(train_data$GSPC)-1,
+                         max_depth = 3, 
+                         objective = 'reg:squarederror', 
+                         nrounds = 10, 
+                         verbose = FALSE,
+                         prediction = TRUE)
+xgboost_model
+```
+```{r}
+yhat.boost<-predict(xgboost_model, 
+                    as.matrix(test_data[, -1])) %>%
+  as.tibble() %>%
+  mutate(prediction = round(value),
+         label = as.numeric(test_data$GSPC)-1) %>%
+  count(prediction, label)
+yhat.boost
+```
+```{r}
+summary(xgboost_model)
+```
+```{r}
+# Plot with all the trees
+library(DiagrammeR)
+xgb.plot.tree(model = xgboost_model)
+```
+```{r}
+#The below code is to plot first tree and show its node ID
+xgb.plot.tree(model = xgboost_model, trees = 0, show_node_id = TRUE)
+```
+```{r}
+#With advance settings
+dtrain <- xgb.DMatrix(as.matrix(train_data[, -1]), 
+                      label = as.numeric(train_data$GSPC)-1)
+dtest <- xgb.DMatrix(as.matrix(test_data[, -1]), 
+                     label = as.numeric(test_data$GSPC)-1)
+
+params <- list(max_depth = 3, 
+               objective = 'reg:squarederror',
+               silent = 0)
+
+watchlist <- list(train = dtrain, eval = dtest)
+
+bst_model <- xgb.train(params = params, 
+                       data = dtrain, 
+                       nrounds = 10, 
+                       watchlist = watchlist,
+                       verbose = FALSE,
+                       prediction = TRUE)
+bst_model
+```
+```{r}
+predict(bst_model, 
+        as.matrix(test_data[, -1])) %>%
+  as.tibble() %>%
+  mutate(prediction = round(value),
+         label = as.numeric(test_data$GSPC)-1) %>%
+  count(prediction, label)
+```
+```{r}
+# Plot with all the trees
+library(DiagrammeR)
+xgb.plot.tree(model = bst_model)
+```
+```{r}
+#The below code is to plot first tree and show its node ID
+xgb.plot.tree(model = bst_model, trees = 0, show_node_id = TRUE)
+```
+```{r}
+#Cross validation
+cv_model <- xgb.cv(params = params,
+                   data = dtrain, 
+                   nrounds = 100, 
+                   watchlist = watchlist,
+                   nfold = 5,
+                   verbose = FALSE,
+                   prediction = TRUE) # prediction of cv folds
+cv_model
+```
+```{r}
+#we can see after how many rounds, we achieved the smallest test error
+cv_model$evaluation_log %>%
+  filter(test_rmse_mean == min(test_rmse_mean))
+```
