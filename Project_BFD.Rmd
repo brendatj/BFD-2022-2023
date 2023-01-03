@@ -1,14 +1,15 @@
+# BFD-2022-2023
+Business and financial Data Guidolin
+---
+title: "Business Economic and Financial Data Project"
+author: "Brenda EloÃ­sa TÃ©llez JuÃ¡rez, Angelica Giangiacomi, Pietro Sanguin"
+date: "2022-11-27"
+output:
+  powerpoint_presentation: default
+  slidy_presentation: default
+---
 
----
-#title: "Business Economic and Financial Data Project"
-#author: "Brenda Eloísa Téllez Juárez, Angelica Giangiacomi, Pietro Sanguin"
-#date: "2022-11-27"
-#output:
-#powerpoint_presentation: default
-#slidy_presentation: default
----
-  
-  ```{r setup, include=FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 ##Setting the working directory
@@ -16,11 +17,9 @@ knitr::opts_chunk$set(echo = FALSE)
 #bren<-setwd("~/UNIPD/Business, economics and financial data")
 #```
 
-install.packages("caTools")
 ## Packages
 ```{r}
 #Dataset
-library(car)
 library(readxl)
 #Create the pdf
 library(knitr)
@@ -30,10 +29,7 @@ library(commonmark)
 library(naniar)
 #Visualizations
 library(ggplot2)
-library(tidyverse)
-
-```
-```{r}
+#library(tidyverse)
 library(plotly)
 library(DiagrammeR)
 #Correlation and multicollinearity
@@ -58,14 +54,9 @@ library(caTools)
 set.seed(50)
 ```
 
-
 #Dataset
 ```{r}
-database1 <- read_excel("df.xlsx")
-database1 <- subset(database1, select =-c(...1))
-colnames(database1)[c(1)] <- c("GSPC")
-colnames(database1)[c(5)] <- c("Inflation")
-colnames(database1)[c(7)] <- c("Real interest rate")
+database1 <- read_excel("database1.xlsx")
 data<-database1
 attach(data)
 ```
@@ -102,11 +93,9 @@ gg_miss_var(data)
 #Data transformations
 
 ##Renaming columns
-#We have to remember that Inflation corresponds to MCPI, and Real interest rate are the FED interest rate 
 ```{r}
-#colnames(data) <- c('Year', "VIX",'VIX returns',  "Inflation",'Population', "Real interest #rate", "GDP", "GDP per capita", "GNI",'GSPC returns', "GSPC")
-#columns <- colnames(data)
-
+colnames(data) <- c('Year', "VIX",'VIX returns',  "Inflation",'Population', "Real interest rate", "GDP", "GDP per capita", "GNI",'GSPC returns', "GSPC")
+columns <- colnames(data)
 ```
 
 ##Copy of the original dataframe
@@ -145,7 +134,7 @@ tail(data)
 ##Visualizing distributions
 ```{r}
 dens_vix <- density(log(data$VIX))
-
+ 
 plot_ly(
   data = data,
   x = ~log(VIX),
@@ -159,7 +148,7 @@ plot_ly(
 ```
 ```{r}
 dens_gspc <- density(log(data$GSPC))
-
+ 
 plot_ly(
   data = data,
   x = ~log(GSPC),
@@ -172,7 +161,7 @@ plot_ly(
 ```
 ```{r}
 dens_gdp <- density(log(data$GDP))
-
+ 
 plot_ly(
   data = data,
   x = ~log(GDP),
@@ -203,6 +192,14 @@ ggplot(data,
               formula = y ~ poly(x, 2), 
               color = "purple")
 ```
+##Analizing the relationship between the returns of VIX and GSPC
+```{r}
+data %>% 
+  ggplot() + 
+  aes(x = `VIX returns`, y = `GSPC returns`) + 
+  geom_point(color= "steelblue") +
+  geom_smooth(method = 'lm', color = 'purple', formula = y ~ poly(x, 2)) 
+```
 
 
 ##Analizing the relationship between GDP and GSPC
@@ -213,30 +210,21 @@ data %>%
   geom_point(color= "steelblue") +
   geom_smooth(method = 'lm', color = 'purple') 
 ```
-
 ```{r}
 data %>% 
   ggplot() + 
-  aes(x = Date, y = GSPC) + 
+  aes(x = VIX, y = GSPC) + 
   geom_point(color= "steelblue") +
-  scale_x_date(breaks = years, labels = format(years, "%Y"))
+  geom_smooth(method = 'lm', color = 'purple',formula=y ~ poly(x, 2)) 
 ```
-  
-## Analyis of the GSPC and GDP taking into account the year 
+##Analizing the relationship between the returns of GDP and GSPC
 ```{r}
-data$Date <- as.Date(data$Date, format = "X%Y.%m.%d")
-years <- seq(from = min(data$Date), to = max(data$Date), by = "year")
-
-
 data %>% 
   ggplot() + 
-  aes(x = Date, y = GDP, color = GSPC.Close) +
-  geom_point()+
-  geom_smooth(method = 'lm', color = 'purple')
-
-
+  aes(x = `VIX returns`, y = `GSPC returns`) + 
+  geom_point(color= "steelblue") +
+  geom_smooth(method = 'lm', color = 'purple',formula=y ~ poly(x, 2)) 
 ```
-
 
 
 ##Analizing the relationship between VIX and GDP
@@ -247,7 +235,6 @@ data %>%
   geom_point(color= "steelblue") +
   geom_smooth(method = 'lm', color = 'purple') 
 ```
-
 ```{r}
 data %>% 
   ggplot() + 
@@ -261,8 +248,23 @@ data %>%
 
 ##Plot GSPC
 ```{r}
-x <- Date
+x <- year
 y <- GSPC
+data_graph1 <- data.frame(x, y)
+
+#fig <- plot_ly(data_graph1, x = x, y = y, type = 'scatter', mode = 'lines')
+fig <- plot_ly(data_graph1, x = x, y = y, type = 'scatter', mode = 'lines') %>%
+  layout(xaxis = list(title = "Year"),
+         yaxis = list(title = "GSPC"),
+         line = list(color = "steelblue", width = 2),
+         margin = list(l = 40, r = 40, t = 40, b = 40),
+         legend = list(x = 0, y = 1, bgcolor = "rgba(0,0,0,0)"))
+fig
+```
+##Plot GSPC returns
+```{r}
+x <- year
+y <- `GSPC returns`
 data_graph1 <- data.frame(x, y)
 
 fig <- plot_ly(data_graph1, x = x, y = y, type = 'scatter', mode = 'lines')
@@ -273,17 +275,64 @@ fig
 #AFC GSPC
 ```{r}
 Acf_GSPC<-ggAcf(GSPC, col='blue')
-Acf_GSPC+ ggtitle("Autocorrelation Function ACF") + xlab("Lag") + ylab("ACF")
+Acf_GSPC+ ggtitle("GSPC Autocorrelation") + xlab("Lag") + ylab("ACF")
 ```
 #PACF GSPC
 ```{r}
-Pacf_GSPC<-ggAcf(GSPC, col='blue')
-Pacf_GSPC+ ggtitle("Partial Autocorrelation Function PACF GSPC") + xlab("Lag") + ylab("PACF")
+Pacf_GSPC<-ggPacf(GSPC, col='blue')
+Pacf_GSPC+ ggtitle("GSPC Partial Autocorrelation") + xlab("Lag") + ylab("PACF")
 ```
 ##Plot VIX
 ```{r}
-x <- Date
+x <- year
 y <- VIX
+data_graph2 <- data.frame(x, y)
+
+fig <- plot_ly(data_graph2, x = ~x, y = ~y, type = 'scatter', mode = 'lines')%>%
+  layout(xaxis = list(title = "Year"),
+         yaxis = list(title = "VIX"),
+         line = list(color = "steelblue", width = 2),
+         margin = list(l = 40, r = 40, t = 40, b = 40),
+         legend = list(x = 0, y = 1, bgcolor = "rgba(0,0,0,0)"))
+fig
+```
+##Plot Interest rate and inflation
+```{r}
+x <- year
+y <- interest_rate
+
+
+fig <- plot_ly(data = data, x = ~x, y = ~y, type = 'scatter', mode = 'lines', name = "Interest Rate")%>%
+  layout(xaxis = list(title = "Year"),
+         line = list(color = "steelblue", width = 2),
+         margin = list(l = 40, r = 40, t = 40, b = 40),
+         legend = list(x = 0, y = 1, bgcolor = "rgba(0,0,0,0)"))
+
+y2 <- inflation
+
+
+fig <- fig %>% add_trace(data = data, x = ~x, y = ~y2, type = 'scatter', mode = 'lines', name = "Inflation")
+
+fig
+```
+##Plot Population
+```{r}
+x <- year
+y <- population
+
+fig <- plot_ly(data = data, x = ~x, y = ~y, type = 'scatter', mode = 'lines')%>%
+  layout(xaxis = list(title = "Year"),
+         yaxis = list(title = "Population"),
+         line = list(color = "steelblue", width = 2),
+         margin = list(l = 40, r = 40, t = 40, b = 40),
+         legend = list(x = 0, y = 1, bgcolor = "rgba(0,0,0,0)"))
+fig
+```
+
+##Plot VIX returns
+```{r}
+x <- year
+y <- `VIX returns`
 data_graph2 <- data.frame(x, y)
 
 fig <- plot_ly(data_graph2, x = ~x, y = ~y, type = 'scatter', mode = 'lines')
@@ -302,13 +351,23 @@ Pacf_GSPC+ ggtitle("Partial Autocorrelation Function PACF VIX") + xlab("Lag") + 
 ```
 ##Plot GDP
 ```{r}
-x <- Date
+x <- year
 y <- GDP
 data_graph3 <- data.frame(x, y)
 
-fig <- plot_ly(data_graph3, x = ~x, y = ~y, type = 'scatter', mode = 'lines')
+fig <- plot_ly(data_graph3, x = ~x, y = ~y, type = 'scatter', mode = 'lines', name = "GDP")%>%
+  layout(xaxis = list(title = "Year"),
+         line = list(color = "steelblue", width = 2),
+         margin = list(l = 40, r = 40, t = 40, b = 40),
+         legend = list(x = 0, y = 1, bgcolor = "rgba(0,0,0,0)"))
+
+y2 <- GNI
+
+
+fig <- fig %>% add_trace(data = data, x = ~x, y = ~y2, type = 'scatter', mode = 'lines', name = "GNI")
 
 fig
+htmlwidgets::saveWidget(fig, "plot.html", selfcontained = TRUE)
 ```
 
 ##AFC GDP
@@ -327,7 +386,7 @@ Pacf_GSPC+ ggtitle("Partial Autocorrelation Function PACF GDP") + xlab("Lag") + 
 #Time Series
 
 ```{r}
-#Creating the time series (for yearly data)
+#Creating the time series
 ts1_GSPC<-ts(GSPC, start = 1990, end=2021, frequency = 1)
 ts2_VIX<-ts(VIX, start = 1990, end=2021, frequency = 1)
 ts3_GDP<-ts(GDP, start = 1990, end=2021, frequency = 1)
@@ -335,17 +394,9 @@ is.ts(ts1_GSPC)
 ```
 
 ```{r}
-#Creating the time series (for montly data)
-ts1_GSPC<-ts(GSPC, start = 1990, end=2021, frequency = 12)
-ts2_VIX<-ts(VIX, start = 1990, end=2021, frequency = 12)
-ts3_GDP<-ts(GDP, start = 1990, end=2021, frequency = 12)
-is.ts(ts1_GSPC)
-```
-
-```{r}
 #Returns
-#ts1_GSPC_returns<-ts(`GSPC returns`, start = 1990, end=2021, frequency = 1)
-#ts2_VIX_returns<-ts(`VIX returns`, start = 1990, end=2021, frequency = 1)
+ts1_GSPC_returns<-ts(`GSPC returns`, start = 1990, end=2021, frequency = 1)
+ts2_VIX_returns<-ts(`VIX returns`, start = 1990, end=2021, frequency = 1)
 ```
 
 #Transforming the time series with log and differenciating them
@@ -455,14 +506,13 @@ ts.plot(cbind(ts1_GSPC, ts2_VIX))
 
 ```{r}
 #Log returns for both indexes
-#plot(cbind(ts1_GSPC_returns, ts2_VIX_returns))
+plot(cbind(ts1_GSPC_returns, ts2_VIX_returns))
 ```
 ## Now we can take a look at the correlations between the predictors
 ```{r}
 library(ellipse)
 # plot correlation ellipses
-df_numeric <- select(data, -Date)
-plotcorr(cor(df_numeric))
+plotcorr(cor(data))
 
 ```
 # we can see that there are are some features that are correlated,
@@ -477,42 +527,39 @@ plotcorr(cor(df_numeric))
 
 ```{r}
 # compute VIFs
+library(car)
 
-
-#I rename the column of Real interest rate
-colnames(data)[colnames(data) == "Real interest rate"] <- "Real_interest_rate"
-
-model <- lm(GSPC~VIX+GNI+Population+Inflation+Real_interest_rate+GDP, data = data) 
+model <- lm(GSPC~VIX+GNI+population+inflation+interest_rate+GDP) 
 GSPC_vs_all <- vif(model)
 cat('GSPC:',GSPC_vs_all,'   ')
 
 
-model <- lm(VIX~GSPC+GNI+Population+Inflation+Real_interest_rate+GDP, data=data)
+model <- lm(VIX~GSPC+GNI+population+inflation+interest_rate+GDP)
 VIX_vs_all <- vif(model)
 cat('VIX:', VIX_vs_all,'   ')
 
 
-model <- lm(GNI~GSPC+VIX+Population+Inflation+Real_interest_rate+GDP, data = data)
+model <- lm(GNI~GSPC+VIX+population+inflation+interest_rate+GDP)
 GNI_vs_all <- vif(model)
 cat('GNI:', GNI_vs_all,'   ')
 
 
-model <- lm(Population~GSPC+VIX+GNI+Inflation+Real_interest_rate+GDP, data = data)
+model <- lm(population~GSPC+VIX+GNI+inflation+interest_rate+GDP)
 population_vs_all <- vif(model)
 cat('population:', population_vs_all,'   ')
 
 
-model <- lm(Inflation~GSPC+VIX+GNI+Population+Real_interest_rate+GDP, data = data)
+model <- lm(inflation~GSPC+VIX+GNI+population+interest_rate+GDP)
 inflation_vs_all <- vif(model)
 cat('inflation:', inflation_vs_all,'   ')
 
 
-model <- lm(Real_interest_rate~GSPC+VIX+GNI+Population+Inflation+GDP, data = data)
+model <- lm(interest_rate~GSPC+VIX+GNI+population+inflation+GDP)
 interest_rate_vs_all <- vif(model)
 cat('interest_rate:', interest_rate_vs_all,'   ')
 
 
-model <- lm(GDP~GSPC+VIX+GNI+Population+Inflation+Real_interest_rate, data = data)
+model <- lm(GDP~GSPC+VIX+GNI+population+inflation+interest_rate)
 GPD_vs_all <- vif(model)
 cat('GDP:', GPD_vs_all)
 ```
@@ -523,22 +570,22 @@ cat('GDP:', GPD_vs_all)
 # Now we compute the VIFs without considering GNI, population and GDP predictors (i.e. those ones having the highest VIF values)
 
 ```{r}
-model <- lm(GSPC~VIX+Inflation+Real_interest_rate, data = data) 
+model <- lm(GSPC~VIX+inflation+interest_rate) 
 GSPC_vs_all <- vif(model)
 cat('GSPC:',GSPC_vs_all,'   ')
 
 
-model <- lm(VIX~GSPC+Inflation+Real_interest_rate, data = data)
+model <- lm(VIX~GSPC+inflation+interest_rate)
 VIX_vs_all <- vif(model)
 cat('VIX:', VIX_vs_all,'   ')
 
 
-model <- lm(Inflation~GSPC+VIX+Real_interest_rate, data = data)
+model <- lm(inflation~GSPC+VIX+interest_rate)
 inflation_vs_all <- vif(model)
 cat('inflation:', inflation_vs_all,'   ')
 
 
-model <- lm(Real_interest_rate~GSPC+VIX+Inflation, data = data)
+model <- lm(interest_rate~GSPC+VIX+inflation)
 interest_rate_vs_all <- vif(model)
 cat('interest_rate:', interest_rate_vs_all,'   ')
 ```
@@ -629,17 +676,11 @@ tsdisplay(r1)
 auto.a<- auto.arima(GSPC)
 auto.a
 
+plot(forecast(auto.a))
 ```
+
 ```{r}
-plot(forecast(auto.a, h=3650))
-```
-```{r}
-plot(forecast(auto.a, h=400), xlim = (c(8000, 9000)))
-```
-## They are all different measures (different scales) so are difficult to represent in the same plot
-```{r}
-df_autoplot <- select(data, -GSPC.Volume)
-autoplot(ts(df_autoplot))
+autoplot(ts(data))
 ```
 
 
@@ -666,7 +707,7 @@ fitted(armax2)
 plot(GSPC, type='l')
 lines(fitted(armax2), col=2)
 AIC(armax2)
-AIC(arima1)
+AIC(a1)
 ```
 ```{r}
 armax3<- auto.arima(GSPC, xreg=VIX)
@@ -680,7 +721,7 @@ lines(fitted(armax3), col=2)
 ```{r}
 AIC(armax3)
 AIC(armax2)
-AIC(arima1)
+AIC(a1)
 ```
 #doesnt work the tslm
 
@@ -706,10 +747,10 @@ par(mfrow=c(1,1))
 ```{r}
 
 m1.graph<-ggplot(data, aes(x=data$GSPC, y=data$Population))+
-  geom_point() + geom_smooth(method="lm", col="pink") +
+                     geom_point() + geom_smooth(method="lm", col="pink") +
   labs(title = "GSPC as a function of Population",
-       x = "GSPC",
-       y = "Population")
+      x = "GSPC",
+      y = "Population")
 
 m1.graph
 ```
@@ -742,7 +783,7 @@ m4 <- step(m1, direction="both")
 summary(m4)
 ```
 ```{r}
-m5 <- lm(data$GSPC~data$Population +data$Date+ data$VIX+ data$GNI, data=training_set)
+m5 <- lm(data$GSPC~data$Population +data$Year+ data$VIX+ data$GNI+ data$`GSPC returns`, data=training_set)
 summary(m5)
 ```
 ```{r}
@@ -800,7 +841,7 @@ xgboost_model
 ```
 ```{r}
 yhat.boost<-predict(xgboost_model, 
-                    as.matrix(test_data[, -1])) %>%
+        as.matrix(test_data[, -1])) %>%
   as.tibble() %>%
   mutate(prediction = round(value),
          label = as.numeric(test_data$GSPC)-1) %>%
@@ -824,7 +865,7 @@ xgb.plot.tree(model = xgboost_model, trees = 0, show_node_id = TRUE)
 dtrain <- xgb.DMatrix(as.matrix(train_data[, -1]), 
                       label = as.numeric(train_data$GSPC)-1)
 dtest <- xgb.DMatrix(as.matrix(test_data[, -1]), 
-                     label = as.numeric(test_data$GSPC)-1)
+                      label = as.numeric(test_data$GSPC)-1)
 
 params <- list(max_depth = 3, 
                objective = 'reg:squarederror',
@@ -873,3 +914,5 @@ cv_model
 cv_model$evaluation_log %>%
   filter(test_rmse_mean == min(test_rmse_mean))
 ```
+#The graph between predicted values is missing
+
