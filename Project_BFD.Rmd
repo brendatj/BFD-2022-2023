@@ -916,3 +916,19 @@ cv_model$evaluation_log %>%
 ```
 #The graph between predicted values is missing
 
+#Regresion Splines
+```{r}
+library(splines)
+library(splines2)
+```
+```{r}
+plot(x=data$GDP, y=data$GSPC, xlab="GSPC", ylab="VIX")
+fit2<-smooth.spline(data$GDP,data$GSPC,cv = TRUE)
+fit2
+```
+```{r}
+plot(data$GDP,data$GSPC,col="grey")
+#Plotting Regression Line
+lines(fit2,lwd=2,col="purple")
+legend("topright",("Smoothing Splines with  4.237564 df selected by CV"),col="purple",lwd=2)
+```
